@@ -1,12 +1,13 @@
 const { Flight } = require('../models/flights');
+const { Airport } = require('../models/airports');
 const { validationResult } = require('express-validator');
 const axios = require('axios');
 
 const indexController = (req, res) => {
-    res.send('Hello from server!');
+    res.send('Flight API V1.0.0');
 };
 
-const viewAll = async (req, res) => {
+const getAllFlights = async (req, res) => {
     const flights = await Flight.find();
     res.status(200).json({ flights });
 };
@@ -17,9 +18,38 @@ const getFlightById = async (req, res) => {
 }
 
 const getFlightByParam = async (req, res) => {
-    const flight = await Flight.findOne({ flightCode: req.params.flightCode });
-    res.status(200).json({ flight });
-}
+    try {
+        const obj = {
+            to: '',
+            airport: '' || 'ND',
+            temp: '' || 'ND',
+            flightState: '',
+            company: ''
+        }
+        const flight = await Flight.findOne({ flightCode: req.params.flightCode });
+        const airport = await Airport.findOne({ city: flight.to });
+
+        if (airport !== null) {
+            let info = await getAdditionalData(airport.iata_code);
+            
+            obj.to = flight.to;
+            obj.airport = airport.name;
+            obj.temp = info.temp;
+            obj.flightState = flight.flightState;
+            obj.company = flight.company;
+
+            res.status(200).json({ obj });
+        } else {
+            obj.to = flight.to;
+            obj.flightState = flight.flightState;
+            obj.company = flight.company;
+
+            res.status(200).json({ obj });
+        };
+    } catch (error) {
+        res.status(501).json({ msg: error })
+    };
+};
 
 const addFlight = async (req, res) => {
     try {
@@ -43,7 +73,7 @@ const updateFlight = async (req, res) => {
         const err = validationResult(req);
         if (err.isEmpty()) {
             await Flight.findByIdAndUpdate(req.params.id, req.body);
-            res.status(201).json({ msg: "Update success!" });
+            res.status(201).json({ msg: "Update successful!" });
         } else {
             res.status(501).json(err);
         }
@@ -57,7 +87,7 @@ const updateFlight = async (req, res) => {
 const deleteFlight = async (req, res) => {
     try {
         await Flight.findByIdAndDelete(req.params.id);
-        res.status(200).json({ msg: "Delete successfully!" });
+        res.status(200).json({ msg: "Delete successful!" });
     } catch (error) {
         res.status(501).json(error);
     }
@@ -85,7 +115,7 @@ const getAdditionalData = async (code) => {
 
     try {
         const res = await axios.get(baseURL + `?country_code=AR&iata_code=${code}&api_key=${apiKey}`);
-        if(res.data.response !== undefined){
+        if (res.data.response !== undefined) {
             const [{ name, lat, lng }] = res.data.response;
             info.airport = name;
             let temp = await getWeather(lat, lng);
@@ -112,10 +142,35 @@ const getWeather = async (lat, lng) => {
     }
 };
 
-// Before save must call api for airport name, after save with data. Before response build with weather data, previously call api with lat and long data. 
-// https://airportcodes.io/en/country/argentina/
-// https://airlabs.co/api/v9/airports?country_code=AR&iata_code=EQS&api_key=dd50ec33-092e-4e42-b194-6358011d8950
-// https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/esquel?unitGroup=metric&key=FR7CG4Q4CVGBSHAQURG5YTN7T&contentType=json
-// https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/-42.908558%2C-71.140491?unitGroup=metric&key=FR7CG4Q4CVGBSHAQURG5YTN7T&contentType=json
+const addAirport = async (req, res) => {
+    try {
+        const err = validationResult(req);
+        if (err.isEmpty()) {
+            const airport = new Airport(req.body);
+            await airport.save();
+            res.status(201).json({ airport });
+        } else {
+            res.status(501).json({ err });
+        };
+    } catch (error) {
+        res.status(501).json({
+            msg: error
+        });
+    };
+};
 
-module.exports = { indexController, viewAll, getFlightById, getFlightByParam, addFlight, updateFlight, deleteFlight, getAllFlightData }
+const getAllAirports = async (req, res) => {
+    const airports = await Airport.find();
+    res.status(200).json({ airports });
+};
+
+const deleteAirport = async (req, res) => {
+    try {
+        await Flight.findByIdAndDelete(req.params.code);
+        res.status(200).json({ msg: "Delete successful!" });
+    } catch (error) {
+        res.status(501).json(error);
+    }
+};
+
+module.exports = { indexController, getAllFlights, getFlightById, getFlightByParam, getAllFlightData, addFlight, updateFlight, deleteFlight, getAllAirports, addAirport, deleteAirport }

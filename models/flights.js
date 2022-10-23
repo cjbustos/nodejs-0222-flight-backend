@@ -5,7 +5,7 @@ const Schema = mongoose.Schema;
 const flightsSchema = new Schema({
 
     flightCode: {
-        type: Number,
+        type: String,
         required: true
     },
     from: {
@@ -18,7 +18,13 @@ const flightsSchema = new Schema({
     },
     date: {
         type: Date,
-        required: true
+        required: true,
+    },
+    time: {
+        type: String,
+        required: true,
+        default: 'NT'
+        // NT - No time
     },
     flightState: {
         type: String,
@@ -28,7 +34,6 @@ const flightsSchema = new Schema({
         type: String,
         required: true
     }
-
 });
 
 const Flight = mongoose.model('Flight', flightsSchema);

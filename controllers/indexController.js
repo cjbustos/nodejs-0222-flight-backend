@@ -4,20 +4,21 @@ const { validationResult } = require('express-validator');
 const axios = require('axios');
 
 const indexController = (req, res) => {
-    res.send('Flight API V1.0.0');
+    res.send('Flight API V1.0.1');
 };
 
 const getAllFlights = async (req, res) => {
     const flights = await Flight.find();
-    res.status(200).json({ flights });
+    res.status(200).json(flights);
 };
 
 const getFlightById = async (req, res) => {
     const flight = await Flight.findById(req.params.id);
-    res.status(200).json({ flight });
+    res.status(200).json(flight);
 }
 
 const getFlightByParam = async (req, res) => {
+
     try {
         const obj = {
             to: '',
@@ -26,28 +27,30 @@ const getFlightByParam = async (req, res) => {
             flightState: '',
             company: ''
         }
+
         const flight = await Flight.findOne({ flightCode: req.params.flightCode });
         const airport = await Airport.findOne({ city: flight.to });
 
         if (airport !== null) {
+
             let info = await getAdditionalData(airport.iata_code);
-            
+
             obj.to = flight.to;
             obj.airport = airport.name;
             obj.temp = info.temp;
             obj.flightState = flight.flightState;
             obj.company = flight.company;
 
-            res.status(200).json({ obj });
+            res.status(200).json({ data: obj });
         } else {
             obj.to = flight.to;
             obj.flightState = flight.flightState;
             obj.company = flight.company;
 
-            res.status(200).json({ obj });
+            res.status(200).json({ data: obj });
         };
     } catch (error) {
-        res.status(501).json({ msg: error })
+        res.status(400).json({ msg: 'flight code is wrong!' });
     };
 };
 
@@ -101,8 +104,6 @@ const getAllFlightData = async (req, res) => {
         res.json({ status: err.response.status, data: err.response.data })
     };
 };
-
-
 
 const getAdditionalData = async (code) => {
     const baseURL = 'https://airlabs.co/api/v9/airports';
@@ -173,4 +174,18 @@ const deleteAirport = async (req, res) => {
     }
 };
 
-module.exports = { indexController, getAllFlights, getFlightById, getFlightByParam, getAllFlightData, addFlight, updateFlight, deleteFlight, getAllAirports, addAirport, deleteAirport }
+const controllers = {
+    index: indexController,
+    allFlights: getAllFlights,
+    flightById: getFlightById,
+    flightByParam: getFlightByParam,
+    allFlightData: getAllFlightData,
+    addFlight: addFlight,
+    updateFlight: updateFlight,
+    deleteFlight: deleteFlight,
+    allAirports: getAllAirports,
+    addAirport: addAirport,
+    deleteAirport: deleteAirport
+}
+
+module.exports = { controllers }
